@@ -139,6 +139,7 @@ fn handle_input_line(swarm: &mut P2PNetworkSwarm, line: String) {
     let mut args = line.split_whitespace();
     match args.next() {
         Some("PING") => send_ping_to_peer(args, &mut swarm.msg_proto),
+        Some("TRUSTPING") => send_trustping_to_peer(args, &mut swarm.msg_proto),
         Some("CMD") => send_cmd_to_peer(args, &mut swarm.msg_proto),
         Some("LIST") => {
             println!("Current Buckets:");
@@ -157,6 +158,20 @@ fn handle_input_line(swarm: &mut P2PNetworkSwarm, line: String) {
 }
 
 fn send_ping_to_peer(mut args: SplitWhitespace, msg_proto: &mut RequestResponse<CommandCodec>) {
+    if let Some(peer_id) = args.next() {
+        if let Ok(peer) = PeerId::from_str(peer_id) {
+            let ping = CommandRequest::Ping;
+            println!("Sending Ping to peer {:?}", peer);
+            msg_proto.send_request(&peer, ping);
+        } else {
+            println!("Faulty target peer id");
+        }
+    } else {
+        println!("Expected target peer id");
+    }
+}
+
+fn send_trustping_to_peer(mut args: SplitWhitespace, msg_proto: &mut RequestResponse<CommandCodec>) {
     if let Some(peer_id) = args.next() {
         if let Ok(peer) = PeerId::from_str(peer_id) {
             let ping = CommandRequest::Ping;

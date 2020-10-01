@@ -81,6 +81,10 @@ impl NetworkBehaviourEventProcess<RequestResponseEvent<CommandRequest, CommandRe
     }
 }
 
+pub enum DIDCCommand {
+    TrustPing
+}
+
 impl P2PNetworkBehaviour {
     fn handle_request_msg(
         &mut self,
@@ -95,11 +99,21 @@ impl P2PNetworkBehaviour {
             OtherReq(cmd) => {
                 println!(
                     "Received command: {:?}, we will Send a 'success' back",
-                    String::from_utf8(cmd)
+                    String::from_utf8(cmd.to_owned())
                 );
+                let string = String::from_utf8(cmd);
+                let trustping = String::from("TRUSTPING");
+                match string {
+                    trustping => {
+                        println!(
+                            "TRUSTPING command: we will Send a 'signed success' back"
+                        );
+                   }
+                }
                 // TODO: react to received command
-                self.msg_proto
-                    .send_response(channel, OtherRes(String::from("Success").into_bytes()))
+                self
+                        .msg_proto
+                        .send_response(channel, OtherRes(String::from("Success").into_bytes()))
             }
         }
     }
