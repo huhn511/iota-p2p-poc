@@ -23,7 +23,9 @@ serde_json = "1.0"
 actix-web = "3.0.2"
 env_logger = "0.7"
 
-identity_core = { git = "https://github.com/iotaledger/identity.rs", branch = "dev"}
+identity_core = { path = "../identity.rs/identity_core"}
+identity_common = { path = "../identity.rs/identity_common"}
+identity_comm = { path = "../identity.rs/identity_comm"}
 
 [build-dependencies]
 prost-build = "0.6.1"

@@ -25,7 +25,10 @@ use std::{
 };
 
 use identity_core::did::{DID};
-mod DIDComm;
+use identity_common::Timestamp;
+use identity_comm::did_comm::{TrustPing};
+use identity_comm::types::{TRUSTPING};
+use identity_comm::DIDComm_message;
 
 mod dht_proto {
     include!(concat!(env!("OUT_DIR"), "/dht.pb.rs"));
@@ -239,12 +242,9 @@ fn send_cmd_to_peer(mut args: SplitWhitespace, msg_proto: &mut RequestResponse<C
             let other = CommandRequest::Other(cmd.as_bytes().to_vec());
             println!("Sending command {:?} to peer: {:?}", cmd, peer);
 
-
-
-            // IF CMD == Trustping
-
             match cmd {
                 "TRUSTPING" => {
+                    // IF CMD == Trustping
                     println!("send TRUSTPING command");
                     let did = DID {
                         method_name: "iota".into(),
@@ -254,14 +254,44 @@ fn send_cmd_to_peer(mut args: SplitWhitespace, msg_proto: &mut RequestResponse<C
                     .init()
                     .unwrap();
                     // println!("did: {}", did.to_string());
-                    let trustping_string = serde_json::to_string(&DIDComm::TrustPing{did}).unwrap();
+                    // let trustping_string = serde_json::to_string(&TrustPing{response_requested: true}).unwrap();
 
                     // change "TRUSTPING" with DIDComm Message type
                     //let trustping = CommandRequest::Other("TRUSTPING DID".to_string().as_bytes().to_vec());
-                    let trustping = CommandRequest::Other(trustping_string.as_bytes().to_vec());
+                    
 
-                    // send request for trustping with own DID
-                    msg_proto.send_request(&peer, trustping);
+                    let mut did_comm_message: DIDComm_message = DIDComm_message::new();
+                    did_comm_message.set_id(Timestamp::now().to_rfc3339().to_string());
+                    
+                    
+                    did_comm_message.set_from(did.to_string());
+                    
+
+
+                    // did_comm_message.set_type(types.TrustPing); // https:://didcomm.org/v1/messages/TrustPing
+                    
+                    
+                    did_comm_message.set_type(TRUSTPING); // https:://didcomm.org/v1/messages/TrustPing
+
+                    
+                    let ping = TrustPing { response_requested: true };                    
+                    let value = serde_json::to_value(ping).unwrap();
+                    let object = value.as_object().unwrap();
+                    did_comm_message.set_body(object.clone());
+
+                    println!("did_comm_message: {:?}", did_comm_message);
+                    
+                    // TODO: sign message
+                    
+
+                    let did_comm_message_string = serde_json::to_string(&did_comm_message).unwrap();
+
+                    // add trustping to did_comm_message body
+                    let did_comm_message_request = CommandRequest::Other(did_comm_message_string.as_bytes().to_vec());
+
+
+                    // send request for did_comm_message 
+                    msg_proto.send_request(&peer, did_comm_message_request);
                     
                 },
                 _ => {
