@@ -3,6 +3,7 @@
 // Kademlia is a DTH to identify other nodes and exchange information
 // RequestResponse Protocol with generic Request / Responde messages for custom behaviour
 
+
 use crate::command_protocol::{
     CommandCodec,
     CommandRequest::{self, Other as OtherReq, Ping},
@@ -82,7 +83,7 @@ impl NetworkBehaviourEventProcess<RequestResponseEvent<CommandRequest, CommandRe
 }
 
 pub enum DIDCCommand {
-    TrustPing
+    TrustPing,
 }
 
 impl P2PNetworkBehaviour {
@@ -97,23 +98,36 @@ impl P2PNetworkBehaviour {
                 self.msg_proto.send_response(channel, Pong);
             }
             OtherReq(cmd) => {
+
                 println!(
                     "Received command: {:?}, we will Send a 'success' back",
                     String::from_utf8(cmd.to_owned())
                 );
-                let string = String::from_utf8(cmd);
-                let trustping = String::from("TRUSTPING");
-                match string {
+
+                let trustping = "TRUSTPING".to_string();
+                let test = "TEST".to_string();
+
+                match String::from_utf8(cmd).unwrap() {
                     trustping => {
-                        println!(
-                            "TRUSTPING command: we will Send a 'signed success' back"
-                        );
-                   }
-                }
-                // TODO: react to received command
-                self
+                        println!("TRUSTPING command: we will Send a 'signed success' back");
+                        self.msg_proto.send_response(
+                            channel,
+                            OtherRes(String::from("TRUSTPING command").into_bytes()),
+                        )
+                    },
+                    test => {
+                        println!("TEST command: we will Send a 'test success' back");
+
+                    },
+                    _ => {
+                        println!("DEFAULT command: we will Send a 'default success' back");
+
+                        self
                         .msg_proto
                         .send_response(channel, OtherRes(String::from("Success").into_bytes()))
+                    }
+                }
+                // TODO: react to received command
             }
         }
     }
