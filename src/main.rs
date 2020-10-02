@@ -10,6 +10,7 @@ use libp2p::{
     core::Multiaddr,
     identity::Keypair,
     kad::{record::store::MemoryStore, Kademlia},
+
     mdns::Mdns,
     request_response::{ProtocolSupport, RequestResponse, RequestResponseConfig},
     swarm::{ExpandedSwarm, IntoProtocolsHandler, NetworkBehaviour, ProtocolsHandler},
@@ -22,6 +23,9 @@ use std::{
     string::String,
     task::{Context, Poll},
 };
+
+use identity_core::did::{DID};
+mod DIDComm;
 
 mod dht_proto {
     include!(concat!(env!("OUT_DIR"), "/dht.pb.rs"));
@@ -42,6 +46,15 @@ fn main() -> Result<(), Box<dyn Error>> {
     let local_keys = Keypair::generate_ed25519();
     let local_peer_id = PeerId::from(local_keys.public());
     println!("Local peer id: {:?}", local_peer_id);
+
+    let did = DID {
+        method_name: "iota".into(),
+        id_segments: vec![local_peer_id.to_base58()],
+        ..Default::default()
+    }
+    .init()
+    .unwrap();
+    println!("did: {}", did.to_string());
 
     // create a transport
     let transport = build_development_transport(local_keys)?;
@@ -225,7 +238,39 @@ fn send_cmd_to_peer(mut args: SplitWhitespace, msg_proto: &mut RequestResponse<C
             };
             let other = CommandRequest::Other(cmd.as_bytes().to_vec());
             println!("Sending command {:?} to peer: {:?}", cmd, peer);
-            msg_proto.send_request(&peer, other);
+
+
+
+            // IF CMD == Trustping
+
+            match cmd {
+                "TRUSTPING" => {
+                    println!("send TRUSTPING command");
+                    let did = DID {
+                        method_name: "iota".into(),
+                        id_segments: vec![peer_id.into()],
+                        ..Default::default()
+                    }
+                    .init()
+                    .unwrap();
+                    // println!("did: {}", did.to_string());
+                    let trustping_string = serde_json::to_string(&DIDComm::TrustPing{did}).unwrap();
+
+                    // change "TRUSTPING" with DIDComm Message type
+                    //let trustping = CommandRequest::Other("TRUSTPING DID".to_string().as_bytes().to_vec());
+                    let trustping = CommandRequest::Other(trustping_string.as_bytes().to_vec());
+
+                    // send request for trustping with own DID
+                    msg_proto.send_request(&peer, trustping);
+                    
+                },
+                _ => {
+                    println!("send default command");
+                    msg_proto.send_request(&peer, other);
+                }
+            }
+
+
         } else {
             println!("Faulty target peer id");
         }

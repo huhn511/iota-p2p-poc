@@ -22,6 +22,9 @@ use libp2p::{
     NetworkBehaviour,
 };
 
+use crate::DIDComm;
+use identity_core::did::{DID};
+
 #[derive(NetworkBehaviour)]
 pub struct P2PNetworkBehaviour {
     pub(crate) kademlia: Kademlia<MemoryStore>,
@@ -82,9 +85,7 @@ impl NetworkBehaviourEventProcess<RequestResponseEvent<CommandRequest, CommandRe
     }
 }
 
-pub enum DIDCCommand {
-    TrustPing,
-}
+
 
 impl P2PNetworkBehaviour {
     fn handle_request_msg(
@@ -100,33 +101,75 @@ impl P2PNetworkBehaviour {
             OtherReq(cmd) => {
 
                 println!(
-                    "Received command: {:?}, we will Send a 'success' back",
-                    String::from_utf8(cmd.to_owned())
+                    "Received: {:?}",
+                    String::from_utf8(cmd.to_owned()).unwrap()
                 );
 
-                let trustping = "TRUSTPING".to_string();
-                let test = "TEST".to_string();
+                // so we can check if we got a message because we try all types, would be good to have a better way to do it
+                let mut received_didcomm_message = false;
 
-                match String::from_utf8(cmd).unwrap() {
-                    trustping => {
-                        println!("TRUSTPING command: we will Send a 'signed success' back");
-                        self.msg_proto.send_response(
-                            channel,
-                            OtherRes(String::from("TRUSTPING command").into_bytes()),
-                        )
-                    },
-                    test => {
-                        println!("TEST command: we will Send a 'test success' back");
+                let message = String::from_utf8(cmd).unwrap();
+                if let Ok(ping) = serde_json::from_str::<DIDComm::TrustPing>(&message){
+                    received_didcomm_message = true;
+                    println!("Received trustping: {:?}", ping);
 
-                    },
-                    _ => {
-                        println!("DEFAULT command: we will Send a 'default success' back");
+                    // let did = DID {
+                    //     method_name: "iota".into(),
+                    //     // get own id here
+                    //     id_segments: vec![peer_id.into()],
+                    //     ..Default::default()
+                    // }
+                    // .init()
+                    // .unwrap();
 
-                        self
-                        .msg_proto
-                        .send_response(channel, OtherRes(String::from("Success").into_bytes()))
-                    }
+                    // let trustping_string = serde_json::to_string(&DIDComm::TrustPing{did}).unwrap();
+                    let trustping = "Trustping pong!".as_bytes().to_vec();
+
+                    self.msg_proto.send_response(
+                                    channel,
+                                    OtherRes(trustping))
                 }
+
+                // if !received_didcomm_message {
+                //     println!("DEFAULT message: we will Send a 'success' back");
+                //         self
+                //         .msg_proto
+                //         .send_response(channel, OtherRes(String::from("Success").into_bytes()));
+                // }
+
+
+                
+                // match &String::from_utf8(cmd).unwrap() as &str {
+                //     "TRUSTPING" => {
+                //         println!("TRUSTPING command: we will Send a 'signed success' back");
+
+
+                //         // this is the answer to an TrustPing Request.
+
+
+                //         // TODO;
+                //         // sign request
+                //         // send answer
+
+
+
+                //         self.msg_proto.send_response(
+                //             channel,
+                //             OtherRes(String::from("TRUSTPING command").into_bytes()),
+                //         )
+                //     },
+                //     "TEST" => {
+                //         println!("TEST command: we will Send a 'test success' back");
+
+                //     },
+                //     _ => {
+                //         println!("DEFAULT command: we will Send a 'default success' back");
+
+                //         self
+                //         .msg_proto
+                //         .send_response(channel, OtherRes(String::from("Success").into_bytes()))
+                //     }
+                // }
                 // TODO: react to received command
             }
         }
